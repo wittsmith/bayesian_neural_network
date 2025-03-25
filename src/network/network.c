@@ -3,28 +3,26 @@
 #include "../utils/utils.h"
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 // Include layer headers.
-
 #include "layers/bayesian_linear.h"
 #include "layers/bayesian_conv.h"
 #include "layers/dropout_layer.h"
 #include "layers/stochastic_activation.h"
+
+// Include Prior and Posterior creation functions.
 #include "priors/prior_laplace.h"
 #include "priors/prior_mixture.h"
 #include "posteriors/posterior_flipout.h"
 #include "posteriors/posterior_structured.h"
 
-
 // ==================
 // Helper Functions for Layer Wrappers
-// ==================
-
-// --- BayesianLinear ---
+// ------------------ (unchanged)
 static double linear_kl_wrapper(void *layer_ptr) {
     return bayesian_linear_kl((BayesianLinear*)layer_ptr, 1.0);
 }
-
 static Layer* create_linear_layer(BayesianLinear *bl) {
     Layer *l = (Layer*)malloc(sizeof(Layer));
     if (!l) {
@@ -36,30 +34,55 @@ static Layer* create_linear_layer(BayesianLinear *bl) {
     l->free_layer = (void (*)(void*)) free_bayesian_linear;
     return l;
 }
+static Matrix* conv_forward_wrapper(void *layer, const Matrix *input, int stochastic) {
+    // Cast the layer pointer to BayesianConv.
+    BayesianConv *bc = (BayesianConv*) layer;
+    
+    // Infer the Tensor shape from the input Matrix.
+    // Assume that the input Matrix has dimensions: [batch_size x flat_dim],
+    // where flat_dim = input_channels * (height * width).
+    int channels = bc->input_channels;
+    int flat = input->cols;
+    int spatial = flat / channels;
+    int side = (int) sqrt((double) spatial);
+    if (side * side * channels != flat) {
+        handle_error("Cannot infer Tensor shape for conv layer from Matrix input.");
+    }
+    
+    // Convert the Matrix to a Tensor.
+    Tensor *tensor_input = matrix_to_tensor(input, channels, side, side);
+    
+    // Call the actual convolution forward function.
+    Matrix *output = bayesian_conv_forward(bc, tensor_input, stochastic);
+    
+    // Free the temporary Tensor.
+    free_tensor(tensor_input);
+    
+    return output;
+}
 
-// --- BayesianConv ---
 static double conv_kl_wrapper(void *layer_ptr) {
     return bayesian_conv_kl((BayesianConv*)layer_ptr);
 }
-
 static Layer* create_conv_layer(BayesianConv *bc) {
     Layer *l = (Layer*)malloc(sizeof(Layer));
     if (!l) {
         handle_error("Failed to allocate Layer for BayesianConv.");
     }
     l->layer = (void*)bc;
-    l->forward = (Matrix* (*)(void*, const Matrix*, int)) bayesian_conv_forward;
+    // Use conv_forward_wrapper to convert Matrix to Tensor before calling bayesian_conv_forward.
+    l->forward = conv_forward_wrapper;
     l->kl = conv_kl_wrapper;
     l->free_layer = (void (*)(void*)) free_bayesian_conv;
     return l;
 }
 
-// --- DropoutLayer ---
+
+
+
 static double dropout_kl_wrapper(void *layer_ptr) {
-    // Dropout layers typically have no KL divergence if no learnable parameters.
     return 0.0;
 }
-
 static Layer* create_dropout_layer_wrapper(DropoutLayer *dl) {
     Layer *l = (Layer*)malloc(sizeof(Layer));
     if (!l) {
@@ -72,10 +95,11 @@ static Layer* create_dropout_layer_wrapper(DropoutLayer *dl) {
     return l;
 }
 
-// --- StochasticActivation ---
 static double stochastic_act_kl_wrapper(void *layer_ptr) {
     return stochastic_activation_kl((StochasticActivation*)layer_ptr);
 }
+
+
 
 static Layer* create_stochastic_act_layer_wrapper(StochasticActivation *sa) {
     Layer *l = (Layer*)malloc(sizeof(Layer));
@@ -87,6 +111,18 @@ static Layer* create_stochastic_act_layer_wrapper(StochasticActivation *sa) {
     l->kl = stochastic_act_kl_wrapper;
     l->free_layer = (void (*)(void*)) free_stochastic_activation;
     return l;
+}
+
+// ------------------
+// Helper: Projection Layer
+// ------------------
+// Create a projection layer (using BayesianLinear) to map from input_dim to target_dim.
+// This layer is inserted internally to adjust the dimension but is not counted as a main layer.
+static Layer* create_projection_layer(int input_dim, int target_dim) {
+    BayesianLinear *proj = create_bayesian_linear(input_dim, target_dim);
+    proj->prior = NULL;
+    proj->posterior = NULL;
+    return create_linear_layer(proj);
 }
 
 // ==================
@@ -103,7 +139,7 @@ Network* create_network(const Config *cfg) {
         handle_error("Failed to allocate Network structure.");
     }
     
-    // Parse neurons_per_layer to get sizes (for linear and conv layers, as applicable).
+    // Parse neurons_per_layer to get sizes.
     int layer_sizes[10];
     int num_sizes = 0;
     char neurons_copy[256];
@@ -114,66 +150,61 @@ Network* create_network(const Config *cfg) {
         token = strtok(NULL, ",");
     }
     
-    // Parse layer_types to determine the type for each layer.
-    // For simplicity, assume at most 10 layers.
+    // Parse layer_types.
     char *layer_types[10];
     int num_types = 0;
     char types_copy[256];
     strncpy(types_copy, cfg->layer_types, sizeof(types_copy));
     token = strtok(types_copy, ",");
     while (token != NULL && num_types < 10) {
-        // Duplicate token string to store in array.
         layer_types[num_types] = strdup(token);
         num_types++;
         token = strtok(NULL, ",");
     }
     
-    // Use the smaller of num_sizes and num_types as the number of layers.
-    int num_layers = (num_sizes < num_types) ? num_sizes : num_types;
-    net->num_layers = num_layers;
-    net->layers = (Layer**)malloc(sizeof(Layer*) * num_layers);
-    if (!net->layers) {
-        handle_error("Failed to allocate layers array in create_network.");
+    // Use the smaller count as the logical number of layers (as per config).
+    int logical_layers = (num_sizes < num_types) ? num_sizes : num_types;
+    net->logical_num_layers = logical_layers;
+    
+    // Allocate an array for the internal (full) layer list.
+    // We allow extra space for inserted projection layers.
+    Layer **full_layers = (Layer**)malloc(sizeof(Layer*) * (logical_layers + logical_layers)); // worst-case double.
+    if (!full_layers) {
+        handle_error("Failed to allocate full layers array in create_network.");
     }
     
-    // For demonstration, define a starting input dimension.
-    int input_dim = 100; // Placeholder; should come from data dimensions.
-    for (int i = 0; i < num_layers; i++) {
-        // Decide layer type from layer_types[i] (convert to lower-case if needed).
-        // For simplicity, we use strcmp; in a robust system, add error checking.
-        if (strcmp(layer_types[i], "linear") == 0) {
-            // Create BayesianLinear layer.
-            int output_dim = layer_sizes[i];
-            BayesianLinear *bl = create_bayesian_linear(input_dim, output_dim);
-            
-            // Set Prior based on cfg->prior_type.
+    int current_index = 0;
+    int current_dim = 100;  // Placeholder input dimension.
+    
+    // Iterate over the logical layers.
+    for (int i = 0; i < logical_layers; i++) {
+        int target_dim = layer_sizes[i];
+        // Get the specified layer type.
+        char *type = layer_types[i];
+        
+        if (strcmp(type, "linear") == 0) {
+            // Create a BayesianLinear layer.
+            BayesianLinear *bl = create_bayesian_linear(current_dim, target_dim);
             if (cfg->prior_type == 1) {
                 bl->prior = create_laplace_prior(0.0, cfg->prior_variance);
             } else if (cfg->prior_type == 2) {
                 bl->prior = create_mixture_prior(0.0, 1.0, 0.0, 1.0, 0.5);
             } else {
-                bl->prior = NULL; // Default Gaussian.
+                bl->prior = NULL;
             }
-            
-            // Set Posterior based on cfg->posterior_method.
             if (cfg->posterior_method == 2) {
                 bl->posterior = create_flipout_posterior();
             } else if (cfg->posterior_method == 1) {
                 bl->posterior = create_structured_posterior(1.0);
             } else {
-                bl->posterior = NULL; // Default mean-field.
+                bl->posterior = NULL;
             }
-            
-            net->layers[i] = create_linear_layer(bl);
-            input_dim = output_dim; // Update input dimension for next layer.
-        } else if (strcmp(layer_types[i], "conv") == 0) {
-            // Create BayesianConv layer.
-            // For demonstration, use fixed parameters for kernel size.
-            int output_channels = layer_sizes[i];
-            int kernel_height = 3, kernel_width = 3;
-            BayesianConv *bc = create_bayesian_conv(input_dim, output_channels, kernel_height, kernel_width);
-            
-            // Set Prior.
+            full_layers[current_index++] = create_linear_layer(bl);
+            current_dim = target_dim;
+        } else if (strcmp(type, "conv") == 0) {
+            // Create a BayesianConv layer.
+            int kernel_h = 3, kernel_w = 3;
+            BayesianConv *bc = create_bayesian_conv(current_dim, target_dim, kernel_h, kernel_w);
             if (cfg->prior_type == 1) {
                 bc->prior = create_laplace_prior(0.0, cfg->prior_variance);
             } else if (cfg->prior_type == 2) {
@@ -181,7 +212,6 @@ Network* create_network(const Config *cfg) {
             } else {
                 bc->prior = NULL;
             }
-            // Set Posterior.
             if (cfg->posterior_method == 2) {
                 bc->posterior = create_flipout_posterior();
             } else if (cfg->posterior_method == 1) {
@@ -189,22 +219,22 @@ Network* create_network(const Config *cfg) {
             } else {
                 bc->posterior = NULL;
             }
-            
-            net->layers[i] = create_conv_layer(bc);
-            // For convolution, input dimension for the next layer is not simply output_channels.
-            // Here, we update input_dim as a placeholder.
-            input_dim = output_channels; 
-        } else if (strcmp(layer_types[i], "dropout") == 0) {
+            full_layers[current_index++] = create_conv_layer(bc);
+            current_dim = target_dim;
+        } else if (strcmp(type, "dropout") == 0) {
             // Create a Dropout layer.
             DropoutLayer *dl = create_dropout_layer(DROPOUT_MC, cfg->dropout_prob, 0.0);
-            net->layers[i] = create_dropout_layer_wrapper(dl);
-            // For dropout, output dimension remains the same as input.
-        } else if (strcmp(layer_types[i], "stochastic") == 0) {
+            full_layers[current_index++] = create_dropout_layer_wrapper(dl);
+            // Dropout does not change dimensions.
+            if (current_dim != target_dim) {
+                // Insert an internal projection layer, but do not count it toward logical_layers.
+                full_layers[current_index++] = create_projection_layer(current_dim, target_dim);
+                current_dim = target_dim;
+            }
+        } else if (strcmp(type, "stochastic") == 0) {
             // Create a StochasticActivation layer.
-            // For demonstration, set the activation parameter arbitrarily.
             double alpha_mean = 0.25, alpha_logvar = -5.0;
             StochasticActivation *sa = create_stochastic_activation(alpha_mean, alpha_logvar);
-            // Set Prior if desired.
             if (cfg->prior_type == 1) {
                 sa->prior = create_laplace_prior(0.0, cfg->prior_variance);
             } else if (cfg->prior_type == 2) {
@@ -212,7 +242,6 @@ Network* create_network(const Config *cfg) {
             } else {
                 sa->prior = NULL;
             }
-            // Set Posterior for stochastic activation.
             if (cfg->posterior_method == 2) {
                 sa->posterior = create_flipout_posterior();
             } else if (cfg->posterior_method == 1) {
@@ -220,26 +249,37 @@ Network* create_network(const Config *cfg) {
             } else {
                 sa->posterior = NULL;
             }
-            net->layers[i] = create_stochastic_act_layer_wrapper(sa);
-            // Output dimension is the same as input dimension.
+            full_layers[current_index++] = create_stochastic_act_layer_wrapper(sa);
+            // Stochastic activation does not change dimensions.
+            if (current_dim != target_dim) {
+                full_layers[current_index++] = create_projection_layer(current_dim, target_dim);
+                current_dim = target_dim;
+            }
         } else {
-            // If the type is unrecognized, default to a BayesianLinear layer.
-            int output_dim = layer_sizes[i];
-            BayesianLinear *bl = create_bayesian_linear(input_dim, output_dim);
+            // Default to BayesianLinear.
+            BayesianLinear *bl = create_bayesian_linear(current_dim, target_dim);
             bl->prior = NULL;
             bl->posterior = NULL;
-            net->layers[i] = create_linear_layer(bl);
-            input_dim = output_dim;
+            full_layers[current_index++] = create_linear_layer(bl);
+            current_dim = target_dim;
         }
     }
     
-    // Free the duplicated layer type strings.
+    // Set the full layer count.
+    net->num_layers = current_index;
+    // The logical number of layers is as per config.
+    // (You could report this separately if needed.)
+    net->layers = full_layers;
+    
+    // Free the temporary layer type strings.
     for (int i = 0; i < num_types; i++) {
         free(layer_types[i]);
     }
     
     return net;
 }
+// Conv forward wrapper: converts Matrix input to Tensor, calls bayesian_conv_forward, then returns the output Matrix.
+
 
 // ==================
 // Forward pass: Propagate input through the network.
@@ -249,8 +289,16 @@ Matrix* network_forward(Network *net, const Matrix *input, int stochastic) {
         handle_error("Null network or input in network_forward.");
     }
     Matrix *current = (Matrix*)input;  // Do not free the original input.
+    
     for (int i = 0; i < net->num_layers; i++) {
-        Matrix *next = net->layers[i]->forward(net->layers[i]->layer, current, stochastic);
+        Matrix *next;
+        // Check if the layer is a conv layer by comparing the forward pointer.
+        if (net->layers[i]->forward == conv_forward_wrapper) {
+            // Call the conv forward wrapper directly.
+            next = conv_forward_wrapper(net->layers[i]->layer, current, stochastic);
+        } else {
+            next = net->layers[i]->forward(net->layers[i]->layer, current, stochastic);
+        }
         if (i > 0) {  // Free intermediate outputs.
             free_matrix(current);
         }
@@ -258,6 +306,8 @@ Matrix* network_forward(Network *net, const Matrix *input, int stochastic) {
     }
     return current;
 }
+
+
 
 // ==================
 // Total KL divergence: Sum KL contributions from each Bayesian layer.

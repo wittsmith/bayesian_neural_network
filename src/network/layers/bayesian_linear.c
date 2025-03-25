@@ -63,6 +63,8 @@ void free_bayesian_linear(BayesianLinear *layer) {
 // When a Posterior object is provided, use its sample() function; otherwise, use sample_gaussian().
 Matrix* bayesian_linear_forward(BayesianLinear *layer, const Matrix *input, int stochastic) {
     if (input->cols != layer->input_dim) {
+        printf("input to cols: %d", input->cols);
+        printf("layer to input_dim: %d", layer->input_dim);
         handle_error("Input dimension mismatch in bayesian_linear_forward.");
     }
     

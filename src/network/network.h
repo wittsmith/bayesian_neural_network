@@ -17,8 +17,9 @@ typedef struct Layer {
 
 // Network structure.
 typedef struct Network {
-    Layer **layers;  // Array of pointers to Layer objects.
-    int num_layers;  // Total number of layers.
+    Layer **layers;        // Array of pointers to all (internal) layers (including projection layers).
+    int num_layers;        // Total number of layers (including extra projection layers).
+    int logical_num_layers; // The number of layers as specified by the configuration (i.e. neurons_per_layer count).
     // (Optional) Additional metadata can be added here.
 } Network;
 

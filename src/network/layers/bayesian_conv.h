@@ -3,6 +3,7 @@
 
 #include "../utils/utils.h"
 #include "../bnn_util.h"
+#include "../utils/math_utils.h"
 #include "../utils/random_utils.h"
 #include "../priors/prior.h"       // For the Prior interface
 #include "../posteriors/posterior.h" // For the Posterior interface
@@ -53,7 +54,8 @@ void free_bayesian_conv(BayesianConv *layer);
 // If a Posterior object is provided, its sample() function is used for sampling.
 // Returns a new Tensor representing the output (shape: (output_channels, out_height, out_width))
 // with out_height = input->height - kernel_height + 1, out_width = input->width - kernel_width + 1.
-Tensor* bayesian_conv_forward(BayesianConv *layer, const Tensor *input, int stochastic);
+Matrix* bayesian_conv_forward(BayesianConv *layer, const Tensor *input, int stochastic);
+Tensor* matrix_to_tensor(const Matrix *m, int channels, int height, int width);
 
 // Compute the total KL divergence for this convolutional layer using the Prior interface.
 // For each weight and bias, if a Prior is assigned, it uses layer->prior->compute_kl();
