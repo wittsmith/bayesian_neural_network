@@ -38,6 +38,6 @@ Matrix* bayesian_linear_forward(BayesianLinear *layer, const Matrix *input, int 
 
 // Compute the total KL divergence for this layer using the Prior interface.
 // For each weight and bias, if a Prior is set, use its compute_kl() function; otherwise, fall back to a default Gaussian KL divergence.
-double bayesian_linear_kl(BayesianLinear *layer);
+double bayesian_linear_kl(BayesianLinear *layer, double default_variance);
 
 #endif // BAYESIAN_LINEAR_H

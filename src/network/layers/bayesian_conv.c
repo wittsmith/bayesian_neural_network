@@ -91,21 +91,25 @@ void free_bayesian_conv(BayesianConv *layer) {
 }
 
 // Forward pass for the Bayesian convolutional layer (stride 1, no padding).
+// Forward pass for the Bayesian convolutional layer (with 'same' padding).
+// This function now produces an output tensor with the same height and width as the input.
 Tensor* bayesian_conv_forward(BayesianConv *layer, const Tensor *input, int stochastic) {
     if (input->channels != layer->input_channels) {
         handle_error("Input channel mismatch in bayesian_conv_forward.");
     }
     
-    int out_height = input->height - layer->kernel_height + 1;
-    int out_width = input->width - layer->kernel_width + 1;
-    if (out_height <= 0 || out_width <= 0) {
-        handle_error("Invalid output dimensions in bayesian_conv_forward.");
-    }
+    // For 'same' convolution, output dimensions equal input dimensions.
+    int out_height = input->height;
+    int out_width = input->width;
     
-    // Create output tensor: shape (output_channels, out_height, out_width)
+    // Compute padding amounts (assuming odd kernel dimensions)
+    int pad_h = layer->kernel_height / 2;
+    int pad_w = layer->kernel_width / 2;
+    
+    // Create output tensor with same spatial dimensions.
     Tensor *output = create_tensor(layer->output_channels, out_height, out_width);
     
-    // For each output channel, compute the convolution.
+    // Loop over each output channel.
     for (int oc = 0; oc < layer->output_channels; oc++) {
         // Compute effective bias for this output channel.
         double b_effective;
@@ -119,37 +123,41 @@ Tensor* bayesian_conv_forward(BayesianConv *layer, const Tensor *input, int stoc
             b_effective = layer->b_mean[oc];
         }
         
-        // Loop over each output pixel.
+        // For each output pixel (with same dimensions as input).
         for (int oh = 0; oh < out_height; oh++) {
             for (int ow = 0; ow < out_width; ow++) {
                 double sum = 0.0;
-                // Sum over input channels and kernel window.
+                // Iterate over each input channel and kernel window.
                 for (int ic = 0; ic < layer->input_channels; ic++) {
                     for (int kh = 0; kh < layer->kernel_height; kh++) {
                         for (int kw = 0; kw < layer->kernel_width; kw++) {
-                            int ih = oh + kh;
-                            int iw = ow + kw;
-                            int input_idx = ic * (input->height * input->width) + ih * input->width + iw;
-                            
-                            int weight_idx = oc * (layer->input_channels * layer->kernel_height * layer->kernel_width)
-                                             + ic * (layer->kernel_height * layer->kernel_width)
-                                             + kh * layer->kernel_width + kw;
-                            
-                            double weight_effective;
-                            if (stochastic) {
-                                if (layer->posterior != NULL) {
-                                    weight_effective = layer->posterior->sample(layer->posterior,
-                                                                                 layer->W_mean[weight_idx],
-                                                                                 layer->W_logvar[weight_idx]);
+                            // Compute the corresponding input index with padding.
+                            int ih = oh + kh - pad_h;
+                            int iw = ow + kw - pad_w;
+                            // Only accumulate if indices are within bounds.
+                            if (ih >= 0 && ih < input->height && iw >= 0 && iw < input->width) {
+                                int input_idx = ic * (input->height * input->width) + ih * input->width + iw;
+                                
+                                int weight_idx = oc * (layer->input_channels * layer->kernel_height * layer->kernel_width)
+                                                 + ic * (layer->kernel_height * layer->kernel_width)
+                                                 + kh * layer->kernel_width + kw;
+                                
+                                double weight_effective;
+                                if (stochastic) {
+                                    if (layer->posterior != NULL) {
+                                        weight_effective = layer->posterior->sample(layer->posterior,
+                                                                                     layer->W_mean[weight_idx],
+                                                                                     layer->W_logvar[weight_idx]);
+                                    } else {
+                                        weight_effective = sample_gaussian(layer->W_mean[weight_idx],
+                                                                           layer->W_logvar[weight_idx]);
+                                    }
                                 } else {
-                                    weight_effective = sample_gaussian(layer->W_mean[weight_idx],
-                                                                       layer->W_logvar[weight_idx]);
+                                    weight_effective = layer->W_mean[weight_idx];
                                 }
-                            } else {
-                                weight_effective = layer->W_mean[weight_idx];
+                                
+                                sum += input->data[input_idx] * weight_effective;
                             }
-                            
-                            sum += input->data[input_idx] * weight_effective;
                         }
                     }
                 }

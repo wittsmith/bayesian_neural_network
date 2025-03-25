@@ -5,17 +5,16 @@
 #include <string.h>
 
 // Include layer headers.
-#include "../layers/bayesian_linear.h"
-#include "../layers/bayesian_conv.h"
-#include "../layers/dropout_layer.h"
-#include "../layers/stochastic_activation.h"
-// (Include others as needed, e.g., noise injection)
 
-// Include Prior and Posterior creation functions.
-#include "../priors/prior_laplace.h"
-#include "../priors/prior_mixture.h"
-#include "../posteriors/posterior_flipout.h"
-#include "../posteriors/posterior_structured.h"
+#include "layers/bayesian_linear.h"
+#include "layers/bayesian_conv.h"
+#include "layers/dropout_layer.h"
+#include "layers/stochastic_activation.h"
+#include "priors/prior_laplace.h"
+#include "priors/prior_mixture.h"
+#include "posteriors/posterior_flipout.h"
+#include "posteriors/posterior_structured.h"
+
 
 // ==================
 // Helper Functions for Layer Wrappers
@@ -23,7 +22,7 @@
 
 // --- BayesianLinear ---
 static double linear_kl_wrapper(void *layer_ptr) {
-    return bayesian_linear_kl((BayesianLinear*)layer_ptr);
+    return bayesian_linear_kl((BayesianLinear*)layer_ptr, 1.0);
 }
 
 static Layer* create_linear_layer(BayesianLinear *bl) {
