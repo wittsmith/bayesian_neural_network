@@ -1,0 +1,5 @@
+/priors README:
+
+This part is implemented with high accuracy and thoroughness. Our code for the Laplace and mixture priors meets the outlined requirements, and we provided clear integration notes for modifying the existing layer code. (The optional priors such as horseshoe and Student‑t remain as potential future extensions.)
+
+* Horseshoe and Student-t are possible future extensions
