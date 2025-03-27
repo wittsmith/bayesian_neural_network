@@ -138,8 +138,11 @@ Matrix* bayesian_conv_forward(BayesianConv *layer, const Tensor *input, int stoc
     }
     
     // Compute output spatial dimensions using valid convolution.
-    int out_height = layer->kernel_height + 1;
-    int out_width = layer->kernel_width + 1;
+    // Compute output spatial dimensions using valid convolution.
+    // (Assuming input->height and input->width represent the spatial dimensions of one sample.)
+    int out_height = input->height - layer->kernel_height + 1;
+    int out_width = input->width - layer->kernel_width + 1;
+
     if (out_height <= 0 || out_width <= 0) {
         printf("out_height: %d; ", out_height);
         printf("out_width: %d", out_width);

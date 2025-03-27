@@ -3,6 +3,7 @@
 #include "../utils/random_utils.h"   // For random number generation.
 #include <stdlib.h>
 #include <math.h>
+#include "../config/config.h"
 
 // Create a new Bayesian linear layer.
 BayesianLinear* create_bayesian_linear(int input_dim, int output_dim) {
@@ -28,7 +29,6 @@ BayesianLinear* create_bayesian_linear(int input_dim, int output_dim) {
     }
     
     // Initialize weights and biases.
-    // Use a small Gaussian initialization for means and a constant for log-variance.
     for (int i = 0; i < output_dim; i++) {
         for (int j = 0; j < input_dim; j++) {
             int idx = i * input_dim + j;
@@ -39,12 +39,25 @@ BayesianLinear* create_bayesian_linear(int input_dim, int output_dim) {
         layer->b_logvar[i] = -5.0;
     }
     
+    // Allocate gradient matrices and arrays:
+    layer->dW_mean = create_matrix(output_dim, input_dim);
+    layer->dW_logvar = create_matrix(output_dim, input_dim);
+    layer->db_mean = (double*)calloc(output_dim, sizeof(double));
+    layer->db_logvar = (double*)calloc(output_dim, sizeof(double));
+    if (!layer->dW_mean || !layer->dW_logvar || !layer->db_mean || !layer->db_logvar) {
+        handle_error("Failed to allocate gradient accumulators.");
+    }
+    
+    // Initialize cached_input pointer to NULL.
+    layer->cached_input = NULL;
+    
     // Initialize the Prior and Posterior pointers to NULL.
     layer->prior = NULL;
     layer->posterior = NULL;
     
     return layer;
 }
+
 
 // Free the resources allocated for the Bayesian linear layer.
 void free_bayesian_linear(BayesianLinear *layer) {
@@ -58,6 +71,70 @@ void free_bayesian_linear(BayesianLinear *layer) {
     }
 }
 
+Matrix* bayesian_linear_backward(BayesianLinear *layer, const Matrix *grad_output, const Config *cfg) {
+    int batch_size = layer->cached_input->rows;
+    int in_dim = layer->input_dim;
+    int out_dim = layer->output_dim;
+
+    // Clear old gradients
+    zero_matrix(layer->dW_mean);
+    zero_matrix(layer->dW_logvar);
+    zero_array(layer->db_mean, out_dim);
+    zero_array(layer->db_logvar, out_dim);
+
+    // Compute gradients from the data loss (MSE component)
+    for (int i = 0; i < out_dim; i++) {
+        for (int j = 0; j < in_dim; j++) {
+            double grad_sum = 0.0;
+            for (int b = 0; b < batch_size; b++) {
+                grad_sum += grad_output->data[b * out_dim + i] *
+                            layer->cached_input->data[b * in_dim + j];
+            }
+            layer->dW_mean->data[i * in_dim + j] = grad_sum;
+        }
+        double grad_bias = 0.0;
+        for (int b = 0; b < batch_size; b++) {
+            grad_bias += grad_output->data[b * out_dim + i];
+        }
+        layer->db_mean[i] = grad_bias;
+    }
+
+    // --- Incorporate the KL divergence gradient ---
+    double kl_weight = cfg->kl_weight;  // hardcoded or from cfg
+    printf("Inside bayesian_linear_backward: kl_weight = %f\n", kl_weight);
+    for (int i = 0; i < out_dim; i++) {
+        for (int j = 0; j < in_dim; j++) {
+            double old_grad = layer->dW_mean->data[i * in_dim + j];
+            double kl_contrib = kl_weight * layer->W_mean->data[i * in_dim + j];
+            layer->dW_mean->data[i * in_dim + j] += kl_contrib;
+            // Print a few sample gradients for debugging:
+            if (i == 0 && j < 5) {
+                printf("Grad[%d,%d]: data loss = %f, KL contrib = %f, new grad = %f\n",
+                       i, j, old_grad, kl_contrib, layer->dW_mean->data[i * in_dim + j]);
+            }
+        }
+    }
+    // Optionally incorporate KL for biases:
+    for (int i = 0; i < out_dim; i++) {
+        double old_bias_grad = layer->db_mean[i];
+        double kl_bias = kl_weight * layer->b_mean[i];
+        layer->db_mean[i] += kl_bias;
+        if (i < 5) {
+            printf("Bias Grad[%d]: data loss = %f, KL contrib = %f, new grad = %f\n",
+                   i, old_bias_grad, kl_bias, layer->db_mean[i]);
+        }
+    }
+    fflush(stdout);
+    // --------------------------------------------------
+
+    // Compute gradient with respect to inputs.
+    Matrix *grad_input = matrix_multiply(grad_output, layer->W_mean);
+    return grad_input;
+}
+
+
+
+
 // Forward pass for the Bayesian linear layer.
 // If 'stochastic' is nonzero, sample weights and biases using the reparameterization trick.
 // When a Posterior object is provided, use its sample() function; otherwise, use sample_gaussian().
@@ -67,6 +144,12 @@ Matrix* bayesian_linear_forward(BayesianLinear *layer, const Matrix *input, int 
         printf("layer to input_dim: %d", layer->input_dim);
         handle_error("Input dimension mismatch in bayesian_linear_forward.");
     }
+    // At the start of bayesian_linear_forward():
+    if (layer->cached_input) {
+        free_matrix(layer->cached_input);
+    }
+    layer->cached_input = copy_matrix(input); // or implement a copy function
+                
     
     int input_samples = input->rows;
     int in_dim = layer->input_dim;

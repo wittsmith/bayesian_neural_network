@@ -5,15 +5,26 @@
 #include "../utils/math_utils.h"
 
 // Abstract layer interface.
+// In network.h
 typedef struct Layer {
-    void *layer;  // Pointer to the concrete layer (e.g., BayesianLinear*, BayesianConv*, DropoutLayer*, StochasticActivation*, etc.)
-    // Forward pass function: given a layer pointer, input Matrix, and stochastic flag, returns an output Matrix.
+    void *layer;
+    
+    // Forward pass
     Matrix* (*forward)(void *layer, const Matrix *input, int stochastic);
-    // KL divergence function: returns the KL divergence for the layer.
+
+    // Backward pass
+    //   - grad_output is the gradient of the loss w.r.t. this layer's output
+    //   - returns the gradient w.r.t. this layer's input (so it can be passed to the previous layer)
+    Matrix* (*backward)(void *layer, const Matrix *grad_output, const Config *cfg);
+
+    // KL divergence
     double (*kl)(void *layer);
-    // Cleanup function: frees the concrete layer.
+
+    // Free resources
     void (*free_layer)(void *layer);
 } Layer;
+
+
 
 // Network structure.
 typedef struct Network {
@@ -28,5 +39,7 @@ Network* create_network(const Config *cfg);
 Matrix* network_forward(Network *net, const Matrix *input, int stochastic);
 double network_total_kl(Network *net);
 void free_network(Network *net);
+Matrix* network_backward(Network *net, const Matrix *grad_output, const Config *cfg);
+
 
 #endif // NETWORK_H

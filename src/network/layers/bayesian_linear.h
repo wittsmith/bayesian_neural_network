@@ -5,6 +5,7 @@
 #include "../bnn_util.h"           // For sample_gaussian and KL divergence helpers.
 #include "../priors/prior.h"       // For the common Prior interface.
 #include "../posteriors/posterior.h" // For the common Posterior interface
+#include "../config/config.h"
 
 // Structure representing a Bayesian fully-connected (linear) layer.
 // Weights and biases are represented by learned means and log-variances.
@@ -19,6 +20,13 @@ typedef struct {
     Prior *prior;
     // Pointer to a Posterior structure for weight sampling.
     Posterior *posterior;
+    Matrix *dW_mean;    // Gradient of the loss w.r.t. W_mean
+    Matrix *dW_logvar;  // Gradient of the loss w.r.t. W_logvar
+    double *db_mean;    // Gradient of the loss w.r.t. b_mean
+    double *db_logvar;  // Gradient of the loss w.r.t. b_logvar
+    Matrix *cached_input; // The input used in the most recent forward pass
+
+
 } BayesianLinear;
 
 // Create a Bayesian linear layer with given input and output dimensions.
@@ -39,5 +47,8 @@ Matrix* bayesian_linear_forward(BayesianLinear *layer, const Matrix *input, int 
 // Compute the total KL divergence for this layer using the Prior interface.
 // For each weight and bias, if a Prior is set, use its compute_kl() function; otherwise, fall back to a default Gaussian KL divergence.
 double bayesian_linear_kl(BayesianLinear *layer, double default_variance);
+
+Matrix* bayesian_linear_backward(BayesianLinear *layer, const Matrix *grad_output, const Config *cfg);
+
 
 #endif // BAYESIAN_LINEAR_H

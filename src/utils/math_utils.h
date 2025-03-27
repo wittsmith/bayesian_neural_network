@@ -29,4 +29,14 @@ double vector_norm(const double *a, int length);
 double kl_divergence_gaussian(double mu1, double var1, double mu2, double var2);
 // Computes KL divergence between two univariate Gaussian distributions using means and variances
 
+// Set all elements of the matrix to zero.
+void zero_matrix(Matrix *m);
+
+// Set all elements of the given array to zero.
+void zero_array(double *arr, int length);
+
+// Create and return a deep copy of a matrix.
+Matrix* copy_matrix(const Matrix *m);
+
+
 #endif // MATH_UTILS_H

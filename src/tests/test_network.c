@@ -15,11 +15,11 @@ int main(void) {
     // Override configuration for testing.
     // Set number of layers, neuron counts, and layer types.
     // For example: 3 layers with "128,64,10" neurons and corresponding types.
-    cfg.num_layers = 3;
-    strncpy(cfg.neurons_per_layer, "128,64,10", sizeof(cfg.neurons_per_layer) - 1);
+    cfg.num_layers = 4;
+    strncpy(cfg.neurons_per_layer, "64,128,64,10", sizeof(cfg.neurons_per_layer) - 1);
     cfg.neurons_per_layer[sizeof(cfg.neurons_per_layer) - 1] = '\0';
     // Specify layer types: valid values: "linear", "conv", "dropout", "stochastic"
-    strncpy(cfg.layer_types, "linear,dropout,linear", sizeof(cfg.layer_types) - 1);
+    strncpy(cfg.layer_types, "linear,linear,linear,linear", sizeof(cfg.layer_types) - 1);
     cfg.layer_types[sizeof(cfg.layer_types) - 1] = '\0';
     
     // Set Prior and Posterior configuration.
@@ -43,7 +43,7 @@ int main(void) {
     
     // Create a synthetic input matrix.
     // Assume input dimension is 100 (as used in create_network).
-    int batch_size = 11;
+    int batch_size = 1;
     int input_dim = 100;
     Matrix *input = create_matrix(batch_size, input_dim);
     // Fill the input matrix with a constant value (e.g., 1.0).

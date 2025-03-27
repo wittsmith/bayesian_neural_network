@@ -282,3 +282,7 @@ int get_inference_method(const Config *cfg) {
 const char* get_data_path(const Config *cfg) {
     return cfg->data_path;
 }
+
+double get_kl_weight(const Config *cfg) {
+    return cfg->kl_weight;
+}

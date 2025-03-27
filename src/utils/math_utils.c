@@ -84,3 +84,43 @@ double kl_divergence_gaussian(double mu1, double var1, double mu2, double var2) 
     // Formula for KL divergence
     return 0.5 * ((var1 / var2) + (pow(mu2 - mu1, 2) / var2) - 1 + log(var2 / var1));
 }
+// zero_matrix: Sets every element of the matrix to 0.0.
+void zero_matrix(Matrix *m) {
+    if (!m) {
+        handle_error("zero_matrix: Matrix is NULL or not properly allocated.");
+    }
+    if (!m->data){
+        handle_error("zero_matrix: matrix has no data");
+    }
+    int total = m->rows * m->cols;
+    for (int i = 0; i < total; i++) {
+        m->data[i] = 0.0;
+    }
+}
+
+// zero_array: Sets every element of the array to 0.0.
+void zero_array(double *arr, int length) {
+    if (!arr) {
+        handle_error("zero_array: Array pointer is NULL.");
+    }
+    for (int i = 0; i < length; i++) {
+        arr[i] = 0.0;
+    }
+}
+
+// copy_matrix: Creates a deep copy of the provided matrix.
+Matrix* copy_matrix(const Matrix *m) {
+    if (!m) {
+        handle_error("copy_matrix: Input matrix is NULL.");
+    }
+    Matrix *new_matrix = create_matrix(m->rows, m->cols);
+    if (!new_matrix) {
+        handle_error("copy_matrix: Failed to allocate memory for new matrix.");
+    }
+    int total = m->rows * m->cols;
+    for (int i = 0; i < total; i++) {
+        new_matrix->data[i] = m->data[i];
+    }
+    return new_matrix;
+}
+

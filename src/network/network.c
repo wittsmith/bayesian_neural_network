@@ -17,23 +17,24 @@
 #include "posteriors/posterior_flipout.h"
 #include "posteriors/posterior_structured.h"
 
+#include "../optimizer/optimizer.h"
+
 // ==================
 // Helper Functions for Layer Wrappers
 // ------------------ (unchanged)
 static double linear_kl_wrapper(void *layer_ptr) {
     return bayesian_linear_kl((BayesianLinear*)layer_ptr, 1.0);
 }
-static Layer* create_linear_layer(BayesianLinear *bl) {
+static Layer* create_linear_layer(BayesianLinear *bl, const Config *cfg) {
     Layer *l = (Layer*)malloc(sizeof(Layer));
-    if (!l) {
-        handle_error("Failed to allocate Layer for BayesianLinear.");
-    }
     l->layer = (void*)bl;
     l->forward = (Matrix* (*)(void*, const Matrix*, int)) bayesian_linear_forward;
+    l->backward = (Matrix* (*)(void*, const Matrix*, const Config*)) bayesian_linear_backward;
     l->kl = linear_kl_wrapper;
     l->free_layer = (void (*)(void*)) free_bayesian_linear;
     return l;
 }
+
 static Matrix* conv_forward_wrapper(void *layer, const Matrix *input, int stochastic) {
     // Cast the layer pointer to BayesianConv.
     BayesianConv *bc = (BayesianConv*) layer;
@@ -113,16 +114,52 @@ static Layer* create_stochastic_act_layer_wrapper(StochasticActivation *sa) {
     return l;
 }
 
+
+
+
+Matrix* network_backward(Network *net, const Matrix *grad_output, const Config *cfg) {
+    Matrix *grad = (Matrix*)grad_output;
+    //printf("net->num_layers: %d", net->num_layers);
+    fflush(stdout);
+    for (int i = net->num_layers - 1; i >= 0; i--) {
+        //printf("iteration %d counting down ", i);
+        if (!net->layers[i]) {
+            printf("Layer %d is NULL\n", i);
+            exit(1);
+        }
+        if (!net->layers[i]->backward) {
+            printf("Backward function pointer for layer %d is NULL\n", i);
+            exit(1);
+        }
+        if (!net->layers[i]->layer) {
+            printf("Internal layer pointer for layer %d is NULL\n", i);
+            exit(1);
+        }
+
+        fflush(stdout);
+
+        Matrix *new_grad = net->layers[i]->backward(net->layers[i]->layer, grad, cfg);
+       // printf("matrix pointer: %p", new_grad);
+        fflush(stdout);
+        if (i < net->num_layers - 1) {
+            free_matrix(grad); // free the old gradient
+        }
+        grad = new_grad;
+    }
+    return grad; // gradient w.r.t. the original input, if needed
+}
+
+
 // ------------------
 // Helper: Projection Layer
 // ------------------
 // Create a projection layer (using BayesianLinear) to map from input_dim to target_dim.
 // This layer is inserted internally to adjust the dimension but is not counted as a main layer.
-static Layer* create_projection_layer(int input_dim, int target_dim) {
+static Layer* create_projection_layer(int input_dim, int target_dim, const Config *cfg) {
     BayesianLinear *proj = create_bayesian_linear(input_dim, target_dim);
     proj->prior = NULL;
     proj->posterior = NULL;
-    return create_linear_layer(proj);
+    return create_linear_layer(proj, cfg);
 }
 
 // ==================
@@ -199,7 +236,7 @@ Network* create_network(const Config *cfg) {
             } else {
                 bl->posterior = NULL;
             }
-            full_layers[current_index++] = create_linear_layer(bl);
+            full_layers[current_index++] = create_linear_layer(bl, cfg);
             current_dim = target_dim;
         } else if (strcmp(type, "conv") == 0) {
             // Create a BayesianConv layer.
@@ -228,7 +265,7 @@ Network* create_network(const Config *cfg) {
             // Dropout does not change dimensions.
             if (current_dim != target_dim) {
                 // Insert an internal projection layer, but do not count it toward logical_layers.
-                full_layers[current_index++] = create_projection_layer(current_dim, target_dim);
+                full_layers[current_index++] = create_projection_layer(current_dim, target_dim, cfg);
                 current_dim = target_dim;
             }
         } else if (strcmp(type, "stochastic") == 0) {
@@ -252,7 +289,7 @@ Network* create_network(const Config *cfg) {
             full_layers[current_index++] = create_stochastic_act_layer_wrapper(sa);
             // Stochastic activation does not change dimensions.
             if (current_dim != target_dim) {
-                full_layers[current_index++] = create_projection_layer(current_dim, target_dim);
+                full_layers[current_index++] = create_projection_layer(current_dim, target_dim, cfg);
                 current_dim = target_dim;
             }
         } else {
@@ -260,7 +297,7 @@ Network* create_network(const Config *cfg) {
             BayesianLinear *bl = create_bayesian_linear(current_dim, target_dim);
             bl->prior = NULL;
             bl->posterior = NULL;
-            full_layers[current_index++] = create_linear_layer(bl);
+            full_layers[current_index++] = create_linear_layer(bl, cfg);
             current_dim = target_dim;
         }
     }

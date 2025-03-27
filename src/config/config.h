@@ -35,7 +35,7 @@
 
 // Variational Inference (BBB)
 #define DEFAULT_MC_SAMPLES_TRAIN      1           // MC samples per gradient update
-#define DEFAULT_KL_WEIGHT             1.0         // Scaling factor for KL divergence
+#define DEFAULT_KL_WEIGHT             .001        // Scaling factor for KL divergence
 #define DEFAULT_LOCAL_REPARAM         1           // Flag: 1 to use local reparameterization
 
 // MC-Dropout
@@ -155,5 +155,6 @@ double get_regularization_weight(const Config *cfg);
 double get_prior_variance(const Config *cfg);
 int get_inference_method(const Config *cfg);
 const char* get_data_path(const Config *cfg);
+double get_kl_weight(const Config *cfg);
 
 #endif // CONFIG_H

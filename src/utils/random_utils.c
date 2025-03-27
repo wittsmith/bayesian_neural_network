@@ -8,8 +8,9 @@ void init_random(unsigned int seed) {
 }
 
 double random_uniform() {
-    return rand() / (RAND_MAX + 1.0);
+    return ((double)rand() + 1.0) / ((double)RAND_MAX + 1.0);
 }
+
 
 double random_gaussian(double mean, double stddev) {
     // Use Box-Muller transform to generate a standard normal random value.
