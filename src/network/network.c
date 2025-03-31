@@ -94,6 +94,7 @@ static Layer* create_dropout_layer_wrapper(DropoutLayer *dl) {
     l->layer = (void*)dl;
     l->type = LAYER_DROPOUT;
     l->forward = (Matrix* (*)(void*, const Matrix*, int)) dropout_forward;
+    l->backward = (Matrix* (*)(void*, const Matrix*, const Config*)) dropout_backward;
     l->kl = dropout_kl_wrapper;
     l->free_layer = (void (*)(void*)) free_dropout_layer;
     return l;

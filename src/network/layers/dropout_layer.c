@@ -18,12 +18,16 @@ DropoutLayer* create_dropout_layer(DropoutType type, double dropout_prob, double
     layer->type = type;
     layer->dropout_prob = dropout_prob;
     layer->temperature = temperature;
+    layer->dropout_mask = NULL;  // Initialize mask to NULL
     return layer;
 }
 
 // Free the dropout layer.
 void free_dropout_layer(DropoutLayer *layer) {
     if (layer) {
+        if (layer->dropout_mask) {
+            free_matrix(layer->dropout_mask);
+        }
         free(layer);
     }
 }
@@ -42,6 +46,13 @@ Matrix* dropout_forward(DropoutLayer *layer, const Matrix *input, int training) 
     // Create an output matrix with the same dimensions as input.
     Matrix *output = create_matrix(input->rows, input->cols);
     int total_elements = input->rows * input->cols;
+    
+    // Free any existing mask
+    if (layer->dropout_mask) {
+        free_matrix(layer->dropout_mask);
+    }
+    // Create a new mask matrix
+    layer->dropout_mask = create_matrix(input->rows, input->cols);
     
     // For each element, compute dropout mask and apply it.
     for (int i = 0; i < total_elements; i++) {
@@ -73,9 +84,30 @@ Matrix* dropout_forward(DropoutLayer *layer, const Matrix *input, int training) 
             handle_error("Unknown dropout type in dropout_forward.");
         }
         
-        // Apply the mask to the input.
+        // Store the mask
+        layer->dropout_mask->data[i] = mask;
+        // Apply the mask to the input
         output->data[i] = input->data[i] * mask;
     }
     
     return output;
+}
+
+// Backward pass for dropout layer.
+// Applies the same dropout mask to the gradients.
+Matrix* dropout_backward(DropoutLayer *layer, const Matrix *grad_output, const Config *cfg) {
+    if (!layer || !grad_output || !layer->dropout_mask) {
+        handle_error("Invalid input to dropout_backward.");
+    }
+    
+    // Create output gradient matrix
+    Matrix *grad_input = create_matrix(grad_output->rows, grad_output->cols);
+    int total_elements = grad_output->rows * grad_output->cols;
+    
+    // Apply the same dropout mask to the gradients
+    for (int i = 0; i < total_elements; i++) {
+        grad_input->data[i] = grad_output->data[i] * layer->dropout_mask->data[i];
+    }
+    
+    return grad_input;
 }

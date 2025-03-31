@@ -76,12 +76,12 @@ int main(void) {
     strncpy(cfg.neurons_per_layer, "64,128,64,1", sizeof(cfg.neurons_per_layer) - 1);
     cfg.neurons_per_layer[sizeof(cfg.neurons_per_layer) - 1] = '\0';
     // Specify layer types. For this test, use "linear,linear,stochastic,linear".
-    strncpy(cfg.layer_types, "linear,linear,stochastic,linear", sizeof(cfg.layer_types) - 1);
+    strncpy(cfg.layer_types, "linear,stochastic,dropout,linear", sizeof(cfg.layer_types) - 1);
     cfg.layer_types[sizeof(cfg.layer_types) - 1] = '\0';
     // Set Prior and Posterior methods.
     cfg.prior_type = 0;         // Use Laplace prior.
-    cfg.prior_variance = .1;
-    cfg.posterior_method = 2;   // Use Flipout posterior.
+    cfg.prior_variance = 5;
+    cfg.posterior_method = 1;   // Use Flipout posterior.
     // Dropout probability (used by dropout layers).
     cfg.dropout_prob = 0.5;
     cfg.learning_rate = .00000005;
