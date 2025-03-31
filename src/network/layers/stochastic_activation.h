@@ -12,6 +12,7 @@
 typedef struct {
     double alpha_mean;    // Mean value of the negative slope parameter.
     double alpha_logvar;  // Log variance of the negative slope parameter.
+    double prior_variance; // Prior variance for KL divergence computation
     Prior *prior;         // Pointer to Prior interface.
     Posterior *posterior; // Pointer to Posterior interface.
     // --- Added for backward pass ---
