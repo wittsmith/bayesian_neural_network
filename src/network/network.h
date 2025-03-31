@@ -4,10 +4,20 @@
 #include "../config/config.h"
 #include "../utils/math_utils.h"
 
+// Enumeration for different layer types
+typedef enum {
+    LAYER_BAYESIAN_LINEAR,
+    LAYER_BAYESIAN_CONV,
+    LAYER_DROPOUT,
+    LAYER_STOCHASTIC_ACTIVATION,
+    LAYER_PROJECTION
+} LayerType;
+
 // Abstract layer interface.
 // In network.h
 typedef struct Layer {
     void *layer;
+    LayerType type;  // Type of the layer
     
     // Forward pass
     Matrix* (*forward)(void *layer, const Matrix *input, int stochastic);

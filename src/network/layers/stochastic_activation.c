@@ -36,7 +36,7 @@ Matrix* stochastic_activation_backward(void *layer, const Matrix *grad_output, c
         
         // Apply noise injection if configured
         if (cfg->noise_injection > 0.0) {
-            grad_out += random_gaussian(0.0, cfg->noise_injection);
+            grad_out += sample_gaussian(0.0, cfg->noise_injection);
         }
         
         // For x >= 0, derivative is 1; for x < 0, derivative is alpha (sampled value).

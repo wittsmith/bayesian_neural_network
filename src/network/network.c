@@ -28,6 +28,7 @@ static double linear_kl_wrapper(void *layer_ptr) {
 static Layer* create_linear_layer(BayesianLinear *bl, const Config *cfg) {
     Layer *l = (Layer*)malloc(sizeof(Layer));
     l->layer = (void*)bl;
+    l->type = LAYER_BAYESIAN_LINEAR;
     l->forward = (Matrix* (*)(void*, const Matrix*, int)) bayesian_linear_forward;
     l->backward = (Matrix* (*)(void*, const Matrix*, const Config*)) bayesian_linear_backward;
     l->kl = linear_kl_wrapper;
@@ -71,6 +72,7 @@ static Layer* create_conv_layer(BayesianConv *bc) {
         handle_error("Failed to allocate Layer for BayesianConv.");
     }
     l->layer = (void*)bc;
+    l->type = LAYER_BAYESIAN_CONV;
     // Use conv_forward_wrapper to convert Matrix to Tensor before calling bayesian_conv_forward.
     l->forward = conv_forward_wrapper;
     l->kl = conv_kl_wrapper;
@@ -90,6 +92,7 @@ static Layer* create_dropout_layer_wrapper(DropoutLayer *dl) {
         handle_error("Failed to allocate Layer for DropoutLayer.");
     }
     l->layer = (void*)dl;
+    l->type = LAYER_DROPOUT;
     l->forward = (Matrix* (*)(void*, const Matrix*, int)) dropout_forward;
     l->kl = dropout_kl_wrapper;
     l->free_layer = (void (*)(void*)) free_dropout_layer;
@@ -107,8 +110,9 @@ static Layer* create_stochastic_act_layer_wrapper(StochasticActivation *sa) {
         handle_error("Failed to allocate Layer for StochasticActivation.");
     }
     l->layer = (void*)sa;
+    l->type = LAYER_STOCHASTIC_ACTIVATION;
     l->forward = (Matrix* (*)(void*, const Matrix*, int)) stochastic_activation_forward;
-    l->backward = (Matrix* (*)(void*, const Matrix*, const Config*)) stochastic_activation_backward;  // <-- Add this line
+    l->backward = (Matrix* (*)(void*, const Matrix*, const Config*)) stochastic_activation_backward;
     l->kl = stochastic_act_kl_wrapper;
     l->free_layer = (void (*)(void*)) free_stochastic_activation;
     return l;

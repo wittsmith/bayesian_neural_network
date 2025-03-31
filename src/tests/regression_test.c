@@ -142,7 +142,7 @@ int main(void) {
         fflush(stdout);
         
         // Update parameters using the optimizer.
-        network_update_params(net, cfg);
+        network_update_params(net, &cfg);
         printf("3");
         fflush(stdout);
 
