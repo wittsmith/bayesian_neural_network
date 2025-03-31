@@ -101,7 +101,6 @@ static double stochastic_act_kl_wrapper(void *layer_ptr) {
 }
 
 
-
 static Layer* create_stochastic_act_layer_wrapper(StochasticActivation *sa) {
     Layer *l = (Layer*)malloc(sizeof(Layer));
     if (!l) {
@@ -109,6 +108,7 @@ static Layer* create_stochastic_act_layer_wrapper(StochasticActivation *sa) {
     }
     l->layer = (void*)sa;
     l->forward = (Matrix* (*)(void*, const Matrix*, int)) stochastic_activation_forward;
+    l->backward = (Matrix* (*)(void*, const Matrix*, const Config*)) stochastic_activation_backward;  // <-- Add this line
     l->kl = stochastic_act_kl_wrapper;
     l->free_layer = (void (*)(void*)) free_stochastic_activation;
     return l;
@@ -175,6 +175,8 @@ Network* create_network(const Config *cfg) {
     if (!net) {
         handle_error("Failed to allocate Network structure.");
     }
+ //   printf("allocated network structure\n");
+    fflush(stdout);
     
     // Parse neurons_per_layer to get sizes.
     int layer_sizes[10];
@@ -209,7 +211,8 @@ Network* create_network(const Config *cfg) {
     if (!full_layers) {
         handle_error("Failed to allocate full layers array in create_network.");
     }
-    
+   // printf("allocated full layers array\n");
+    fflush(stdout);
     int current_index = 0;
     int current_dim = 100;  // Placeholder input dimension.
     

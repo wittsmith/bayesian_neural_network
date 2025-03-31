@@ -1,0 +1,126 @@
+# Utils Module README
+
+This module provides a collection of utility functions organized into three main areas:
+- **Random Utilities:** Functions for random number generation.
+- **Math Utilities:** Basic operations for matrices and vectors.
+- **General Utilities:** Logging, error handling, and miscellaneous helper functions.
+
+---
+
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Files and Their Purpose](#files-and-their-purpose)
+   - [Random Utilities](#random-utilities)
+   - [Math Utilities](#math-utilities)
+   - [General Utilities](#general-utilities)
+3. [Detailed Descriptions](#detailed-descriptions)
+   - [Random Utilities](#random-utilities-details)
+   - [Math Utilities](#math-utilities-details)
+   - [General Utilities](#general-utilities-details)
+4. [Compilation and Dependencies](#compilation-and-dependencies)
+5. [Usage Example](#usage-example)
+6. [Additional Notes](#additional-notes)
+
+---
+
+## Overview
+
+The utilities provided in this module support several key functions:
+- **Random Number Generation:** Generate uniform, Gaussian, and Bernoulli random values.
+- **Matrix and Vector Operations:** Create and manipulate matrices (addition, multiplication, transpose, and deep copy), compute vector dot products and norms, and calculate KL divergence between univariate Gaussian distributions.
+- **Logging and Error Handling:** Log messages at various levels (DEBUG, INFO, WARN, ERROR) and handle errors robustly by logging and terminating execution on fatal errors.
+
+---
+
+## Files and Their Purpose
+
+### Random Utilities
+- **Files:** `random_utils.c` and `random_utils.h`
+- **Purpose:** 
+  - Initialize the random number generator with a seed.
+  - Generate uniformly distributed random numbers.
+  - Produce Gaussian-distributed numbers using the Box-Muller transform.
+  - Generate Bernoulli-distributed outcomes based on a probability parameter.
+
+### Math Utilities
+- **Files:** `math_utils.c` and `math_utils.h`
+- **Purpose:** 
+  - Manage matrix creation and deallocation.
+  - Perform basic matrix arithmetic (multiplication, addition, transpose).
+  - Implement vector operations such as dot product and L2 norm.
+  - Calculate KL divergence between two univariate Gaussian distributions.
+  - Provide utility functions to zero out matrices/arrays and create deep copies of matrices.
+  - **Note:** This module depends on error handling from the General Utilities module.
+
+### General Utilities
+- **Files:** `utils.c` and `utils.h`
+- **Purpose:** 
+  - Define log levels (DEBUG, INFO, WARN, ERROR).
+  - Implement logging functions that output timestamped messages.
+  - Provide an error handling function (`handle_error`) that logs fatal errors and exits the program.
+  - Allow configuration of the global log level.
+
+---
+
+## Detailed Descriptions
+
+### Random Utilities Details
+- **`init_random(unsigned int seed)`**  
+  Initializes the random number generator using the provided seed.
+
+- **`random_uniform()`**  
+  Returns a double value in the range [0, 1).
+
+- **`random_gaussian(double mean, double stddev)`**  
+  Uses the Box-Muller transform to generate a normally distributed random value with a specified mean and standard deviation.
+
+- **`random_bernoulli(double p)`**  
+  Returns 1 with probability `p` and 0 otherwise.
+
+---
+
+### Math Utilities Details
+- **Matrix Management:**  
+  - **`create_matrix(int rows, int cols)`**: Allocates and initializes a matrix with specified dimensions.
+  - **`free_matrix(Matrix *m)`**: Frees the memory allocated for a matrix.
+
+- **Matrix Operations:**  
+  - **`matrix_multiply(const Matrix *A, const Matrix *B)`**: Multiplies two matrices, ensuring the inner dimensions match.
+  - **`matrix_add(const Matrix *A, const Matrix *B)`**: Adds two matrices element-wise, requiring identical dimensions.
+  - **`matrix_transpose(const Matrix *A)`**: Returns the transpose of a given matrix.
+
+- **Vector Operations:**  
+  - **`vector_dot(const double *a, const double *b, int length)`**: Computes the dot product of two vectors.
+  - **`vector_norm(const double *a, int length)`**: Computes the L2 norm of a vector.
+
+- **Additional Functions:**  
+  - **`kl_divergence_gaussian(double mu1, double var1, double mu2, double var2)`**: Calculates the KL divergence between two univariate Gaussian distributions.
+  - **`zero_matrix(Matrix *m)`**: Sets every element in the matrix to 0.0.
+  - **`zero_array(double *arr, int length)`**: Sets every element in an array to 0.0.
+  - **`copy_matrix(const Matrix *m)`**: Creates and returns a deep copy of a matrix.
+
+---
+
+### General Utilities Details
+- **Logging Configuration:**  
+  - **`set_log_level(LogLevel level)`**: Sets the global logging level to control verbosity.
+
+- **Logging Functions:**  
+  - **`log_debug(const char *format, ...)`**: Logs a debug-level message.
+  - **`log_info(const char *format, ...)`**: Logs an informational message.
+  - **`log_warn(const char *format, ...)`**: Logs a warning message.
+  - **`log_error(const char *format, ...)`**: Logs an error message.
+
+- **Error Handling:**  
+  - **`handle_error(const char *msg)`**: Logs a fatal error message and terminates the program.
+
+---
+
+## Compilation and Dependencies
+
+- **Standard Libraries:**  
+  All modules make use of standard C libraries such as `<stdlib.h>`, `<stdio.h>`, `<math.h>`, `<time.h>`, and `<stdarg.h>`.
+
+- **Linking with Math Library:**  
+  When compiling, ensure that you link with the math library. For example, using GCC on Unix-like systems:

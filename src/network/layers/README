@@ -1,0 +1,165 @@
+# Layers Module README
+
+This module implements a collection of layer components typically used in Bayesian Neural Networks (BNNs). It includes functionalities for noise injection, stochastic activation, dropout, Bayesian convolution, and Bayesian linear (fully-connected) layers. Each component is designed to support stochastic behavior and uncertainty estimation via techniques such as the reparameterization trick and KL divergence computation.
+
+---
+
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Module Components](#module-components)
+   - [Noise Injection Layer](#noise-injection-layer)
+   - [Stochastic Activation Layer](#stochastic-activation-layer)
+   - [Dropout Layer](#dropout-layer)
+   - [Bayesian Convolutional Layer](#bayesian-convolutional-layer)
+   - [Bayesian Linear Layer](#bayesian-linear-layer)
+3. [Detailed Descriptions and APIs](#detailed-descriptions-and-apis)
+   - [Noise Injection Functions](#noise-injection-functions)
+   - [Stochastic Activation Functions](#stochastic-activation-functions)
+   - [Dropout Layer Functions](#dropout-layer-functions)
+   - [Bayesian Convolution Functions](#bayesian-convolution-functions)
+   - [Bayesian Linear Functions](#bayesian-linear-functions)
+4. [Compilation and Dependencies](#compilation-and-dependencies)
+5. [Usage Example](#usage-example)
+6. [Additional Notes](#additional-notes)
+
+---
+
+## Overview
+
+The layers module provides various components that can be integrated into Bayesian Neural Networks to enable uncertainty estimation and probabilistic inference. Key features include:
+
+- **Stochastic behavior:** Layers sample weights, biases, or activation parameters during training using the reparameterization trick.
+- **Noise injection:** Allows for the addition of controlled noise (Gaussian or Uniform) during the forward pass.
+- **Dropout variants:** Supports both standard Monte Carlo (MC) dropout and a continuous relaxation approach known as concrete dropout.
+- **KL Divergence:** Each Bayesian layer computes the Kullback-Leibler divergence between its learned parameters and a prior distribution to regularize model complexity.
+
+---
+
+## Module Components
+
+### Noise Injection Layer
+- **Files:** `noise_injection.c` and `noise_injection.h`
+- **Purpose:**  
+  Implements a module for adding noise to input matrices. It supports both Gaussian and Uniform noise types. During training, noise is added element-wise to simulate stochasticity, while during inference the inputs are passed unchanged.
+
+### Stochastic Activation Layer
+- **Files:** `stochastic_activation.c` and `stochastic_activation.h`
+- **Purpose:**  
+  Implements a stochastic variant of the Parametric ReLU (PReLU) activation function. The negative slope parameter (alpha) is treated as a random variable that can be sampled from a Gaussian distribution. This layer supports integration with prior and posterior objects for KL divergence computation and uncertainty estimation.
+
+### Dropout Layer
+- **Files:** `dropout_layer.c` and `dropout_layer.h`
+- **Purpose:**  
+  Provides dropout functionality with two variants:
+  - **MC Dropout:** Standard dropout where activations are randomly zeroed out with a fixed probability.
+  - **Concrete Dropout:** A continuous relaxation method that allows the dropout probability to be learned.
+- **Behavior:**  
+  In both cases, the dropout mask is applied element-wise and scaling is performed to maintain activation magnitude.
+
+### Bayesian Convolutional Layer
+- **Files:** `bayesian_conv.c` and `bayesian_conv.h`
+- **Purpose:**  
+  Implements a convolutional layer where weights and biases are modeled probabilistically. It uses a custom `Tensor` structure to handle 3D inputs (channels, height, width) and performs convolution with reparameterization for stochastic sampling. Additionally, it computes KL divergence over convolutional parameters.
+- **Key Features:**  
+  - Supports sampling via a provided Posterior object or a default Gaussian sampling function.
+  - Converts convolution output into a flattened matrix format for further processing.
+
+### Bayesian Linear Layer
+- **Files:** `bayesian_linear.c` and `bayesian_linear.h`
+- **Purpose:**  
+  Implements a fully-connected layer where weights and biases have learned means and log-variances. The layer supports:
+  - **Forward Pass:** Computes outputs using either deterministic or stochastic weight sampling.
+  - **Backward Pass:** Accumulates gradients from both data loss and a KL divergence regularizer.
+  - **KL Divergence Calculation:** Computes the divergence between the learned parameters and a default or provided prior distribution.
+- **Additional Features:**  
+  Gradient accumulators and caching of input matrices for use during backpropagation.
+
+---
+
+## Detailed Descriptions and APIs
+
+### Noise Injection Functions
+
+- **`create_noise_injection(NoiseType type, double mean, double stddev)`**  
+  Allocates and initializes a noise injection module with a specified noise type (Gaussian or Uniform), mean, and standard deviation.
+
+- **`free_noise_injection(NoiseInjection *ni)`**  
+  Frees the memory allocated for the noise injection module.
+
+- **`noise_injection_forward(NoiseInjection *ni, const Matrix *input, int training)`**  
+  During training, adds noise to every element in the input matrix based on the specified noise type; during inference, returns the input unchanged.
+
+### Stochastic Activation Functions
+
+- **`create_stochastic_activation(double alpha_mean, double alpha_logvar)`**  
+  Creates a stochastic activation function (stochastic PReLU) with given mean and log-variance for the negative slope parameter.
+
+- **`free_stochastic_activation(StochasticActivation *act)`**  
+  Frees the allocated memory for the stochastic activation.
+
+- **`stochastic_activation_forward(StochasticActivation *act, const Matrix *input, int stochastic)`**  
+  Applies the stochastic activation to each element of the input matrix. When stochastic mode is enabled, the negative slope is sampled from a Gaussian distribution using either a provided Posterior object or a default sampler.
+
+- **`stochastic_activation_kl(StochasticActivation *act)`**  
+  Computes the KL divergence for the activation's parameters against a prior distribution. If no prior is set, a default Gaussian divergence is computed.
+
+### Dropout Layer Functions
+
+- **`create_dropout_layer(DropoutType type, double dropout_prob, double temperature)`**  
+  Instantiates a dropout layer of a given type (MC or Concrete) with the specified dropout probability and temperature (for concrete dropout).
+
+- **`free_dropout_layer(DropoutLayer *layer)`**  
+  Releases the memory allocated for the dropout layer.
+
+- **`dropout_forward(DropoutLayer *layer, const Matrix *input, int training)`**  
+  Performs the forward pass for dropout. Depending on the dropout type:
+  - **MC Dropout:** Applies a binary mask to the input and scales the activations.
+  - **Concrete Dropout:** Computes a relaxed mask using a sigmoid-based formulation.
+
+### Bayesian Convolution Functions
+
+- **`create_bayesian_conv(int input_channels, int output_channels, int kernel_height, int kernel_width)`**  
+  Allocates and initializes a Bayesian convolutional layer with specified dimensions. Weights and biases are initialized using random Gaussian sampling.
+
+- **`free_bayesian_conv(BayesianConv *layer)`**  
+  Frees all memory associated with the Bayesian convolutional layer.
+
+- **`bayesian_conv_forward(BayesianConv *layer, const Tensor *input, int stochastic)`**  
+  Executes the forward pass for the convolutional layer. It performs a valid convolution on the input tensor and applies the reparameterization trick for stochastic sampling when enabled.
+
+- **`bayesian_conv_kl(BayesianConv *layer)`**  
+  Computes the total KL divergence over all weights and biases for the convolutional layer.
+
+- **`matrix_to_tensor(const Matrix *m, int channels, int height, int width)`**  
+  Converts a flattened matrix back into a tensor with specified dimensions.
+
+### Bayesian Linear Functions
+
+- **`create_bayesian_linear(int input_dim, int output_dim)`**  
+  Creates a Bayesian linear layer with given input and output dimensions. It initializes weight and bias matrices (means and log-variances) and allocates memory for gradient storage.
+
+- **`free_bayesian_linear(BayesianLinear *layer)`**  
+  Frees the resources allocated for the Bayesian linear layer.
+
+- **`bayesian_linear_forward(BayesianLinear *layer, const Matrix *input, int stochastic)`**  
+  Executes the forward pass for the linear layer. Depending on the stochastic flag, it uses reparameterized sampling for weights and biases and caches the input for backward computation.
+
+- **`bayesian_linear_backward(BayesianLinear *layer, const Matrix *grad_output, const Config *cfg)`**  
+  Computes gradients with respect to the input, weights, and biases by combining data loss gradients with a KL divergence contribution.
+
+- **`bayesian_linear_kl(BayesianLinear *layer, double default_variance)`**  
+  Computes the KL divergence over all weights and biases for the linear layer using either a provided prior or a default Gaussian prior.
+
+---
+
+## Compilation and Dependencies
+
+- **Programming Language:** C
+- **Dependencies:**
+  - **Utils Module:** Uses functions from `utils.h` and `random_utils.h` for error handling, random number generation, and matrix operations.
+  - **Math Utilities:** Relies on `math_utils.h` for matrix and vector operations.
+  - **Configuration Module:** The Bayesian linear layer integrates configuration parameters (e.g., KL weight) from the Config module.
+  - **Prior and Posterior Interfaces:** Bayesian layers can utilize externally defined prior and posterior objects to perform sampling and compute KL divergence.
+- **Compilation:**  
+  Ensure that all dependencies (utils, math, config, priors, posteriors) are included in the build. For example, using GCC:

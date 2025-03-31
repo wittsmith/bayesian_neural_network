@@ -262,6 +262,8 @@ double bayesian_conv_kl(BayesianConv *layer) {
     }
     return kl_total;
 }
+
+
 void free_bayesian_conv(BayesianConv *layer) {
     if (layer) {
         free(layer->W_mean);

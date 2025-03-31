@@ -1,25 +1,19 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-      {
-        "name": "Debug my_program",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/my_program",
-        "args": [],
-        "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
-        "environment": [],
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-          {
-            "description": "Enable pretty-printing for gdb",
-            "text": "-enable-pretty-printing",
-            "ignoreFailures": true
-          }
-        ]
-      }
-    ]
-  }
-  
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug regression_test with LLDB",
+      "type": "lldb",
+      "request": "launch",
+      // Point to the compiled executable
+      "program": "${workspaceFolder}/src/regression_test",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      
+      // Optional: environment variables
+
+      // Optional: run a build task before debugging
+      // "preLaunchTask": "build"
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "utils.h": "c"
+        "utils.h": "c",
+        "posterior_flipout.h": "c",
+        "config.h": "c"
     }
 }

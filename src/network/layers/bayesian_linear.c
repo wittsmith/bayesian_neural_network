@@ -5,7 +5,8 @@
 #include <math.h>
 #include "../config/config.h"
 
-// Create a new Bayesian linear layer.
+
+
 BayesianLinear* create_bayesian_linear(int input_dim, int output_dim) {
     BayesianLinear *layer = (BayesianLinear*)malloc(sizeof(BayesianLinear));
     if (!layer) {
@@ -101,7 +102,7 @@ Matrix* bayesian_linear_backward(BayesianLinear *layer, const Matrix *grad_outpu
 
     // --- Incorporate the KL divergence gradient ---
     double kl_weight = cfg->kl_weight;  // hardcoded or from cfg
-    printf("Inside bayesian_linear_backward: kl_weight = %f\n", kl_weight);
+   // printf("Inside bayesian_linear_backward: kl_weight = %f\n", kl_weight);
     for (int i = 0; i < out_dim; i++) {
         for (int j = 0; j < in_dim; j++) {
             double old_grad = layer->dW_mean->data[i * in_dim + j];
@@ -109,8 +110,8 @@ Matrix* bayesian_linear_backward(BayesianLinear *layer, const Matrix *grad_outpu
             layer->dW_mean->data[i * in_dim + j] += kl_contrib;
             // Print a few sample gradients for debugging:
             if (i == 0 && j < 5) {
-                printf("Grad[%d,%d]: data loss = %f, KL contrib = %f, new grad = %f\n",
-                       i, j, old_grad, kl_contrib, layer->dW_mean->data[i * in_dim + j]);
+                //printf("Grad[%d,%d]: data loss = %f, KL contrib = %f, new grad = %f\n",
+                //       i, j, old_grad, kl_contrib, layer->dW_mean->data[i * in_dim + j]);
             }
         }
     }
@@ -120,8 +121,8 @@ Matrix* bayesian_linear_backward(BayesianLinear *layer, const Matrix *grad_outpu
         double kl_bias = kl_weight * layer->b_mean[i];
         layer->db_mean[i] += kl_bias;
         if (i < 5) {
-            printf("Bias Grad[%d]: data loss = %f, KL contrib = %f, new grad = %f\n",
-                   i, old_bias_grad, kl_bias, layer->db_mean[i]);
+           // printf("Bias Grad[%d]: data loss = %f, KL contrib = %f, new grad = %f\n",
+             //      i, old_bias_grad, kl_bias, layer->db_mean[i]);
         }
     }
     fflush(stdout);
@@ -131,7 +132,6 @@ Matrix* bayesian_linear_backward(BayesianLinear *layer, const Matrix *grad_outpu
     Matrix *grad_input = matrix_multiply(grad_output, layer->W_mean);
     return grad_input;
 }
-
 
 
 

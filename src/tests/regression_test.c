@@ -76,7 +76,7 @@ int main(void) {
     strncpy(cfg.neurons_per_layer, "64,128,64,1", sizeof(cfg.neurons_per_layer) - 1);
     cfg.neurons_per_layer[sizeof(cfg.neurons_per_layer) - 1] = '\0';
     // Specify layer types. For this test, use "linear,linear,stochastic,linear".
-    strncpy(cfg.layer_types, "linear,linear,linear,linear", sizeof(cfg.layer_types) - 1);
+    strncpy(cfg.layer_types, "linear,linear,stochastic,linear", sizeof(cfg.layer_types) - 1);
     cfg.layer_types[sizeof(cfg.layer_types) - 1] = '\0';
     // Set Prior and Posterior methods.
     cfg.prior_type = 0;         // Use Laplace prior.
@@ -122,26 +122,28 @@ int main(void) {
         fflush(stdout);
 
         // Compute gradient of the MSE loss with respect to predictions.
-       // printf("DEBUG: pred dimensions: %d x %d, data pointer: %p\n", pred->rows, pred->cols, (void*)pred->data);
+        printf("DEBUG: pred dimensions: %d x %d, data pointer: %p\n", pred->rows, pred->cols, (void*)pred->data);
         fflush(stdout);
 
         Matrix *grad_loss = compute_mse_loss_gradient(pred, Y);
-      //  printf("1");
+        printf("1");
         fflush(stdout);
 
         
         // Backward pass: propagate gradients through the network.
         Matrix *grad_input = network_backward(net, grad_loss, &cfg);
-       // printf("2");
+        printf("2");
         fflush(stdout);
 
         // Free intermediate gradient matrices.
         free_matrix(grad_loss);
         free_matrix(grad_input);
+        printf("5");
+        fflush(stdout);
         
         // Update parameters using the optimizer.
-        network_update_params(net, cfg.learning_rate);
-      //  printf("3");
+        network_update_params(net, cfg);
+        printf("3");
         fflush(stdout);
 
         

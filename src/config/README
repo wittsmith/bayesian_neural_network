@@ -1,0 +1,165 @@
+# Config Module README
+
+This module provides configuration management for applications, primarily focused on machine learning and model training settings. It defines default parameters, enables configuration initialization, command-line argument parsing, and file-based configuration loading. In addition, it offers several getter functions to access specific configuration parameters.
+
+---
+
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Files and Their Purpose](#files-and-their-purpose)
+   - [config.h](#configh)
+   - [config.c](#configc)
+3. [Configuration Structure and Default Constants](#configuration-structure-and-default-constants)
+4. [Function Details](#function-details)
+   - [Initialization](#initialization)
+   - [Command-Line Argument Parsing](#command-line-argument-parsing)
+   - [File-Based Configuration Loading](#file-based-configuration-loading)
+   - [Getter Functions](#getter-functions)
+5. [Usage Example](#usage-example)
+6. [Compilation and Dependencies](#compilation-and-dependencies)
+7. [Additional Notes](#additional-notes)
+
+---
+
+## Overview
+
+The Config module centralizes application settings related to optimization, training, inference, architecture, regularization, and data handling. It is designed to:
+- Provide default values for various configuration parameters.
+- Allow users to override these defaults via command-line arguments or configuration files.
+- Offer a simple and unified interface for accessing configuration data throughout an application.
+
+---
+
+## Files and Their Purpose
+
+### config.h
+- **Purpose:**  
+  Declares the `Config` structure and default constants for the configuration parameters. It also provides function prototypes for:
+  - Initialization (`init_config`)
+  - Command-line argument parsing (`parse_args`)
+  - File-based configuration loading (`load_config_file`)
+  - Various getter functions for specific configuration values.
+- **Key Features:**  
+  - Default constants for learning rate, batch size, number of epochs, optimizer type, dropout probability, and more.
+  - A comprehensive `Config` struct that encapsulates settings for optimization, training, inference methods, architecture, prior distributions, and additional model parameters.
+
+### config.c
+- **Purpose:**  
+  Implements the functions declared in `config.h`. This includes:
+  - Initializing a configuration object with default settings.
+  - Parsing command-line arguments to override default values.
+  - Loading configuration from a file with key-value pairs.
+  - Getter functions to retrieve configuration values in an encapsulated manner.
+- **Key Functions:**
+  - **`init_config(Config *cfg)`**  
+    Initializes the configuration structure with default values.
+  - **`parse_args(Config *cfg, int argc, char *argv[])`**  
+    Parses command-line arguments (e.g., `--lr`, `--batch`, `--epochs`, etc.) to modify configuration parameters.
+  - **`load_config_file(Config *cfg, const char *filename)`**  
+    Reads a configuration file and updates the configuration structure accordingly.
+  - **Getter Functions:**  
+    Functions such as `get_learning_rate`, `get_mini_batch_size`, `get_num_epochs`, etc., provide read-only access to individual configuration values.
+
+---
+
+## Configuration Structure and Default Constants
+
+The configuration is built around a single structure (`Config`) that includes fields for:
+- **Optimization & Training:**  
+  Parameters like learning rate, mini-batch size, number of epochs, learning rate decay, optimizer selection, gradient clipping, and noise injection.
+  
+- **Inference Methods:**  
+  Specifies the method used for inference (e.g., Bayes-by-backprop, MCMC, MC-Dropout, etc.).
+
+- **Model Architecture:**  
+  Number of layers, a comma-separated string for neurons per layer, layer types, and the weight initialization method.
+
+- **Prior Distribution and Posterior Approximation:**  
+  Settings such as prior type, prior variance, covariance structure, and the method for posterior approximation.
+
+- **Variational Inference (BBB), MC-Dropout, MCMC, and EP Methods:**  
+  Configurable parameters for techniques like Monte Carlo sampling, KL divergence weighting, local reparameterization, dropout probability, and other method-specific settings.
+
+- **Regularization and Additional Extras:**  
+  Regularization weight, KL annealing, ensemble size, and data path for training data.
+
+Default values for each parameter are defined as preprocessor constants in `config.h` (e.g., `DEFAULT_LEARNING_RATE`, `DEFAULT_MINI_BATCH_SIZE`, etc.).
+
+---
+
+## Function Details
+
+### Initialization
+- **`init_config(Config *cfg)`**  
+  - Initializes the `Config` structure with default values defined in `config.h`.
+  - Ensures string parameters (e.g., neurons per layer, layer types, data path) are properly null-terminated.
+  - This function should be called before using any configuration settings.
+
+### Command-Line Argument Parsing
+- **`parse_args(Config *cfg, int argc, char *argv[])`**  
+  - Iterates through command-line arguments to update configuration values.
+  - Recognizes various flags such as:
+    - `--lr` for learning rate
+    - `--batch` for mini-batch size
+    - `--epochs` for number of epochs
+    - `--dropout` for dropout probability
+    - And many others related to the training, inference, and model architecture.
+  - Prints a message for unknown arguments.
+
+### File-Based Configuration Loading
+- **`load_config_file(Config *cfg, const char *filename)`**  
+  - Opens a configuration file where each line is expected to be a key-value pair separated by an equals sign (`key=value`).
+  - Reads the file line by line and updates the corresponding fields in the `Config` structure.
+  - Returns `0` on success and `-1` on failure (if the file cannot be opened).
+
+### Getter Functions
+- **Purpose:**  
+  Provide encapsulated access to configuration parameters. For example:
+  - **`get_learning_rate(const Config *cfg)`** returns the current learning rate.
+  - **`get_mini_batch_size(const Config *cfg)`** returns the mini-batch size.
+  - **`get_num_epochs(const Config *cfg)`** returns the number of epochs.
+  - **`get_dropout_prob(const Config *cfg)`** returns the dropout probability.
+  - **`get_regularization_weight(const Config *cfg)`** returns the regularization weight.
+  - **`get_prior_variance(const Config *cfg)`** returns the prior variance.
+  - **`get_inference_method(const Config *cfg)`** returns the inference method setting.
+  - **`get_data_path(const Config *cfg)`** returns the path to the training data file.
+  - **`get_kl_weight(const Config *cfg)`** returns the KL divergence scaling factor.
+
+---
+
+## Usage Example
+
+Below is an example demonstrating how to initialize and use the configuration module:
+
+```c
+#include "config.h"
+#include <stdio.h>
+
+int main(int argc, char *argv[]) {
+    Config cfg;
+    
+    // Initialize the configuration with default values.
+    init_config(&cfg);
+    
+    // Optionally parse command-line arguments to override defaults.
+    parse_args(&cfg, argc, argv);
+    
+    // Alternatively, load configuration from a file.
+    if (load_config_file(&cfg, "config.txt") != 0) {
+        fprintf(stderr, "Error loading configuration file.\n");
+        return -1;
+    }
+    
+    // Retrieve specific configuration values using getters.
+    double lr = get_learning_rate(&cfg);
+    int batchSize = get_mini_batch_size(&cfg);
+    const char* dataPath = get_data_path(&cfg);
+    
+    printf("Learning Rate: %f\n", lr);
+    printf("Mini Batch Size: %d\n", batchSize);
+    printf("Data Path: %s\n", dataPath);
+    
+    // Continue with the rest of your application...
+    return 0;
+}

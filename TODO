@@ -1,0 +1,23 @@
+Monday, March 31:
+    * Backpropagation for Stochastic activation layers
+        * stochstic_activation, config, network, linear_layer, optimizer
+        * You may want to redo your linear_layer backprop in the case it is better
+        * keep shit tight, use all configuration variables
+    * *CFG in all necessary method signatures
+
+Tuesday, April 1:
+    * Backpropagation for all layers, ensure that config.c is used
+    * Optimizers from config.h
+        * adam
+        * sgd with momentum
+        * RMSprop
+        * SGLD
+
+Wednesday, April 2:
+    * Priors and Posteriors for all layer types, ensure that config.c is used
+
+Thursday, April 3:
+    * Check which configs are not being used anywhere algorithmically
+        * implement the ones not being used
+
+AND YOU SHOULD BE DONE??
