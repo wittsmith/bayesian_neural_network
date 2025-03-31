@@ -26,6 +26,7 @@ void init_config(Config *cfg) {
     strncpy(cfg->layer_types, DEFAULT_LAYER_TYPES, sizeof(cfg->layer_types)-1);
     cfg->layer_types[sizeof(cfg->layer_types)-1] = '\0';
     cfg->weight_init_method = DEFAULT_WEIGHT_INIT_METHOD;
+    cfg->input_dim         = DEFAULT_INPUT_DIM;
     
     // Prior Distribution
     cfg->prior_type        = DEFAULT_PRIOR_TYPE;
@@ -92,6 +93,8 @@ void parse_args(Config *cfg, int argc, char *argv[]) {
             cfg->optimizer = atoi(argv[++i]);
         } else if (strcmp(argv[i], "--grad_clip") == 0 && i+1 < argc) {
             cfg->grad_clip = atof(argv[++i]);
+        } else if (strcmp(argv[i], "--input_dim") == 0 && i+1 < argc) {
+            cfg->input_dim = atoi(argv[++i]);
         } else if (strcmp(argv[i], "--noise_injection") == 0 && i+1 < argc) {
             cfg->noise_injection = atof(argv[++i]);
         } else if (strcmp(argv[i], "--inference") == 0 && i+1 < argc) {

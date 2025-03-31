@@ -35,6 +35,7 @@ int main(void) {
     printf("Neurons per layer: %s\n", cfg.neurons_per_layer);
     printf("Layer types: %s\n", cfg.layer_types);
     printf("Prior type: %d, Posterior method: %d\n", cfg.prior_type, cfg.posterior_method);
+    printf("Input dimension: %d\n", cfg.input_dim);
     
     // Create the network.
     Network *net = create_network(&cfg);
@@ -42,12 +43,11 @@ int main(void) {
     printf("Network created with %d layers.\n", net->num_layers);
     
     // Create a synthetic input matrix.
-    // Assume input dimension is 100 (as used in create_network).
+    // Use configured input dimension
     int batch_size = 1;
-    int input_dim = 100;
-    Matrix *input = create_matrix(batch_size, input_dim);
+    Matrix *input = create_matrix(batch_size, cfg.input_dim);
     // Fill the input matrix with a constant value (e.g., 1.0).
-    for (int i = 0; i < batch_size * input_dim; i++) {
+    for (int i = 0; i < batch_size * cfg.input_dim; i++) {
         input->data[i] = 1.0;
     }
     

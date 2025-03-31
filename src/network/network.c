@@ -219,7 +219,7 @@ Network* create_network(const Config *cfg) {
    // printf("allocated full layers array\n");
     fflush(stdout);
     int current_index = 0;
-    int current_dim = 100;  // Placeholder input dimension.
+    int current_dim = cfg->input_dim;  // Use configured input dimension
     
     // Iterate over the logical layers.
     for (int i = 0; i < logical_layers; i++) {
