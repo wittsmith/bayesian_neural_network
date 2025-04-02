@@ -10,9 +10,10 @@ OPTIMIZER_SOURCES = optimizer/optimizer.c
 # Test targets:
 TEST_NETWORK = tests/test_network.c
 TEST_LAYERS = tests/test_layers.c
+TEST_OPTIMIZER = tests/optimizer_test.c
 REGRESSION_TEST = tests/regression_test.c
 
-all: test_network test_layers
+all: test_network test_layers test_optimizer
 
 test_network:
 	$(CC) $(CFLAGS) $(COMMON_SOURCES) $(LAYER_SOURCES) $(PRIOR_SOURCES) $(POSTERIOR_SOURCES) $(NETWORK_SOURCES) $(OPTIMIZER_SOURCES) $(TEST_NETWORK) -lm -o test_network
@@ -20,8 +21,11 @@ test_network:
 test_layers:
 	$(CC) $(CFLAGS) $(COMMON_SOURCES) $(LAYER_SOURCES) $(PRIOR_SOURCES) $(POSTERIOR_SOURCES) $(NETWORK_SOURCES) $(OPTIMIZER_SOURCES) $(TEST_LAYERS) -lm -o test_layers
 
+test_optimizer:
+	$(CC) $(CFLAGS) $(COMMON_SOURCES) $(LAYER_SOURCES) $(PRIOR_SOURCES) $(POSTERIOR_SOURCES) $(NETWORK_SOURCES) $(OPTIMIZER_SOURCES) $(TEST_OPTIMIZER) -lm -o test_optimizer
+
 regression_test:
 	$(CC) $(CFLAGS) $(COMMON_SOURCES) $(LAYER_SOURCES) $(PRIOR_SOURCES) $(POSTERIOR_SOURCES) $(NETWORK_SOURCES) $(OPTIMIZER_SOURCES) $(REGRESSION_TEST) -lm -o regression_test
 
 clean:
-	rm -f test_network test_layers regression_test
+	rm -f test_network test_layers test_optimizer regression_test

@@ -42,19 +42,32 @@ void update_stochastic_activation(StochasticActivation *layer, double lr) {
     layer->d_alpha_mean = 0.0;
 }
 
+// Calculate the decayed learning rate based on the current epoch
+double calculate_decayed_lr(const Config *cfg, int current_epoch) {
+    if (cfg->lr_decay <= 0.0) {
+        return cfg->learning_rate;  // No decay
+    }
+    
+    // Exponential decay: lr = initial_lr * (1 / (1 + decay * epoch))
+    return cfg->learning_rate / (1.0 + cfg->lr_decay * current_epoch);
+}
+
 // Iterate over each layer in the network and update its parameters.
-void network_update_params(Network *net, const Config *cfg) {
+void network_update_params(Network *net, const Config *cfg, int current_epoch) {
+    // Calculate the decayed learning rate
+    double decayed_lr = calculate_decayed_lr(cfg, current_epoch);
+    
     for (int i = 0; i < net->num_layers; i++) {
-        printf("Updating layer %d\n", i);
+        printf("Updating layer %d with decayed lr: %f\n", i, decayed_lr);
         
         // Handle different layer types
         switch (net->layers[i]->type) {
             case LAYER_BAYESIAN_LINEAR:
-                update_bayesian_linear((BayesianLinear*)net->layers[i]->layer, cfg->learning_rate);
+                update_bayesian_linear((BayesianLinear*)net->layers[i]->layer, decayed_lr);
                 break;
                 
             case LAYER_STOCHASTIC_ACTIVATION:
-                update_stochastic_activation((StochasticActivation*)net->layers[i]->layer, cfg->learning_rate);
+                update_stochastic_activation((StochasticActivation*)net->layers[i]->layer, decayed_lr);
                 break;
                 
             case LAYER_DROPOUT:
