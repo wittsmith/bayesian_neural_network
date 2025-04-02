@@ -5,7 +5,7 @@ LAYER_SOURCES = network/layers/bayesian_linear.c network/layers/bayesian_conv.c 
 PRIOR_SOURCES = network/priors/prior_laplace.c network/priors/prior_mixture.c
 POSTERIOR_SOURCES = network/posteriors/posterior_flipout.c network/posteriors/posterior_structured.c
 NETWORK_SOURCES = network/network.c
-OPTIMIZER_SOURCES = optimizer/optimizer.c
+OPTIMIZER_SOURCES = optimizer/optimizer.c optimizer/adam_optimizer.c
 
 # Test targets:
 TEST_NETWORK = tests/test_network.c

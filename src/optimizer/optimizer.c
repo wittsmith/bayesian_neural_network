@@ -1,7 +1,9 @@
 #include "optimizer.h"
+#include "adam_optimizer.h"
 #include "../network/layers/bayesian_linear.h"
 #include "../network/layers/stochastic_activation.h"
 #include <stdio.h>
+
 
 // Update function for BayesianLinear layers using SGD.
 void update_bayesian_linear(BayesianLinear *layer, double lr) {
@@ -58,16 +60,26 @@ void network_update_params(Network *net, const Config *cfg, int current_epoch) {
     double decayed_lr = calculate_decayed_lr(cfg, current_epoch);
     
     for (int i = 0; i < net->num_layers; i++) {
-        printf("Updating layer %d with decayed lr: %f\n", i, decayed_lr);
+        printf("Updating layer %d with optimizer type: %d\n", i, cfg->optimizer);
         
         // Handle different layer types
         switch (net->layers[i]->type) {
             case LAYER_BAYESIAN_LINEAR:
-                update_bayesian_linear((BayesianLinear*)net->layers[i]->layer, decayed_lr);
+                if (cfg->optimizer == 1) { // Adam
+                    adam_update_bayesian_linear((BayesianLinear*)net->layers[i]->layer, 
+                                              net->layers[i]->optimizer_state, cfg);
+                } else { // SGD
+                    update_bayesian_linear((BayesianLinear*)net->layers[i]->layer, decayed_lr);
+                }
                 break;
                 
             case LAYER_STOCHASTIC_ACTIVATION:
-                update_stochastic_activation((StochasticActivation*)net->layers[i]->layer, decayed_lr);
+                if (cfg->optimizer == 1) { // Adam
+                    adam_update_stochastic_activation((StochasticActivation*)net->layers[i]->layer,
+                                                    net->layers[i]->optimizer_state, cfg);
+                } else { // SGD
+                    update_stochastic_activation((StochasticActivation*)net->layers[i]->layer, decayed_lr);
+                }
                 break;
                 
             case LAYER_DROPOUT:

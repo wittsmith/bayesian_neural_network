@@ -16,6 +16,11 @@ void init_config(Config *cfg) {
     cfg->grad_clip         = DEFAULT_GRAD_CLIP;
     cfg->noise_injection   = DEFAULT_NOISE_INJECTION;
     
+    // Adam Optimizer Specific
+    cfg->adam_beta1        = DEFAULT_ADAM_BETA1;
+    cfg->adam_beta2        = DEFAULT_ADAM_BETA2;
+    cfg->adam_epsilon      = DEFAULT_ADAM_EPSILON;
+    
     // Inference Method
     cfg->inference_method  = DEFAULT_INFERENCE_METHOD;
     

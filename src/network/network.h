@@ -3,6 +3,7 @@
 
 #include "../config/config.h"
 #include "../utils/math_utils.h"
+#include "../optimizer/adam_optimizer.h"
 
 // Enumeration for different layer types
 typedef enum {
@@ -18,6 +19,7 @@ typedef enum {
 typedef struct Layer {
     void *layer;
     LayerType type;  // Type of the layer
+    AdamState* optimizer_state;
     
     // Forward pass
     Matrix* (*forward)(void *layer, const Matrix *input, int stochastic);

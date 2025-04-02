@@ -16,6 +16,11 @@
 #define DEFAULT_GRAD_CLIP             5.0
 #define DEFAULT_NOISE_INJECTION       0.0
 
+// Adam Optimizer Specific
+#define DEFAULT_ADAM_BETA1           0.9
+#define DEFAULT_ADAM_BETA2           0.999
+#define DEFAULT_ADAM_EPSILON         1e-8
+
 // Inference Method
 #define DEFAULT_INFERENCE_METHOD      0           // 0: Bayes-by-backprop, 1: MCMC, 2: SGLD, 3: MC-Dropout, 4: EP
 
@@ -83,6 +88,11 @@ typedef struct {
     int optimizer;
     double grad_clip;
     double noise_injection;
+    
+    // Adam Optimizer Specific
+    double adam_beta1;
+    double adam_beta2;
+    double adam_epsilon;
     
     // Inference Method
     int inference_method;
