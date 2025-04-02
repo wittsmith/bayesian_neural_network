@@ -2,7 +2,7 @@
 #define DROPOUT_LAYER_H
 
 #include "../utils/math_utils.h"  // For the Matrix type
-
+#include "../../config/config.h"
 // Enumeration to distinguish between dropout variants.
 typedef enum {
     DROPOUT_MC,        // Standard Monte Carlo dropout
@@ -14,6 +14,7 @@ typedef struct {
     DropoutType type;       // Type of dropout (MC or Concrete)
     double dropout_prob;    // Dropout probability (for MC dropout, fixed; for concrete, learned)
     double temperature;     // Temperature parameter for concrete dropout (ignored for MC dropout)
+    Matrix *dropout_mask;   // Store the dropout mask for backpropagation
 } DropoutLayer;
 
 // Create a dropout layer with the specified type, dropout probability, and temperature.
@@ -29,5 +30,9 @@ void free_dropout_layer(DropoutLayer *layer);
 // Note: For MC dropout in a BNN, dropout is kept active at inference, so typically
 // the same function is used regardless of training/inference mode.
 Matrix* dropout_forward(DropoutLayer *layer, const Matrix *input, int training);
+
+// Backward pass for the dropout layer.
+// Applies the same dropout mask to the gradients.
+Matrix* dropout_backward(DropoutLayer *layer, const Matrix *grad_output, const Config *cfg);
 
 #endif // DROPOUT_LAYER_H

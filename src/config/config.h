@@ -24,6 +24,7 @@
 #define DEFAULT_NEURONS_PER_LAYER     "128,128,10" // Comma-separated list
 #define DEFAULT_LAYER_TYPES           "linear,linear,linear"  // Comma-separated list of layer types (e.g., "linear,conv,dropout")
 #define DEFAULT_WEIGHT_INIT_METHOD    0           // 0: Xavier, 1: He, etc.
+#define DEFAULT_INPUT_DIM            100          // Default input dimension
 
 // Prior Distribution
 #define DEFAULT_PRIOR_TYPE            0           // 0: Gaussian, 1: Laplace, 2: Mixture
@@ -91,6 +92,7 @@ typedef struct {
     char neurons_per_layer[256]; // Comma-separated list of neuron counts
     char layer_types[256];       // Comma-separated list of layer types
     int weight_init_method;
+    int input_dim;              // Input dimension for the network
     
     // Prior Distribution
     int prior_type;

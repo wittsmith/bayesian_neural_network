@@ -94,6 +94,7 @@ static Layer* create_dropout_layer_wrapper(DropoutLayer *dl) {
     l->layer = (void*)dl;
     l->type = LAYER_DROPOUT;
     l->forward = (Matrix* (*)(void*, const Matrix*, int)) dropout_forward;
+    l->backward = (Matrix* (*)(void*, const Matrix*, const Config*)) dropout_backward;
     l->kl = dropout_kl_wrapper;
     l->free_layer = (void (*)(void*)) free_dropout_layer;
     return l;
@@ -218,7 +219,7 @@ Network* create_network(const Config *cfg) {
    // printf("allocated full layers array\n");
     fflush(stdout);
     int current_index = 0;
-    int current_dim = 100;  // Placeholder input dimension.
+    int current_dim = cfg->input_dim;  // Use configured input dimension
     
     // Iterate over the logical layers.
     for (int i = 0; i < logical_layers; i++) {
